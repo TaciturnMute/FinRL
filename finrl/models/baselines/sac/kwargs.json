@@ -1,0 +1,137 @@
+{
+    "env_trade_kwargs": {
+        "stock_dim": null,
+        "hmax": 100,
+        "initial_amount": 1000000,
+        "num_stock_shares": null,
+        "buy_cost_pct": null,
+        "sell_cost_pct": null,
+        "reward_scaling": 0.0001,
+        "state_space": null,
+        "action_space": null,
+        "tech_indicator_list": [
+            "macd",
+            "boll_ub",
+            "boll_lb",
+            "rsi_30",
+            "cci_30",
+            "dx_30",
+            "close_30_sma",
+            "close_60_sma"
+        ],
+        "turbulence_threshold": null,
+        "risk_indicator_col": "turbulence",
+        "reward_aliase": "asset_diff",
+        "cash_norm_factor": 1e-6,
+        "num_share_norm_factor": null,
+        "if_price_norm": null,
+        "if_indicator_norm": null,
+        "if_num_share_norm": null,
+        "max_price":null,
+        "min_price":null
+    },
+    "env_portfolio_kwargs": {
+        "stock_dim": null,
+        "hmax": 100,
+        "initial_amount": 1000000,
+        "buy_cost_pct": null,
+        "sell_cost_pct": null,
+        "reward_scaling": 0.0001,
+        "state_space": null,
+        "action_space": null,
+        "tech_indicator_list": [
+            "macd",
+            "rsi_30",
+            "cci_30",
+            "dx_30"
+        ],
+        "turbulence_threshold": null,
+        "lookback": 252,
+        "reward_aliase": "asset_diff"
+    },
+    "model_params_init_kwargs": {
+        "aliase": "xavier_uniform",
+        "activation": "relu",
+        "a": 0,
+        "seed": 1,
+        "flag": false
+    },
+    "actor_kwargs": {
+        "state_dim": null,
+        "action_dim": null,
+        "activation_fn": null,
+        "dropout": 0
+    },
+    "critic_kwargs": {
+        "state_dim": null,
+        "action_dim": null,
+        "activation_fn": null,
+        "n_critics": null,
+        "dropout": 0
+    },
+    "ou_noise_kwargs": {
+        "mu": null,
+        "sigma": 0.05,
+        "theta": 0.15,
+        "dt": 0.1,
+        "x0": null,
+        "seed": 1,
+        "randomness": true
+    },
+    "normal_noise_kwargs": {
+        "loc": null,
+        "std": 0.05,
+        "seed": 10,
+        "randomness": true
+    },
+    "smooth_noise_kwargs": {
+        "loc": null,
+        "std": 0.05,
+        "seed": 20,
+        "randomness": true,
+        "clip": 0.1,
+        "batch_size": null
+    },
+    "agent_kwargs": {
+        "env_train": null,
+        "env_validation": null,
+        "env_test": null,
+        "buffer_size": 100000,
+        "batch_size": 100,
+        "n_steps": 1,
+        "if_prioritized": false,
+        "policy_update_delay": null,
+        "target_copy_interval": null,
+        "training_start": 100,
+        "episodes": 10,
+        "n_updates": 1,
+        "gamma": 0.99,
+        "actor_lr": null,
+        "critic_lr": null,
+        "tau": 0.005,
+        "init_value": 1.0,
+        "ent_coef_lr": 3e-4,
+        "auto_ent_coef": true,
+        "critic_kwargs": null,
+        "actor_kwargs": null,
+        "print_interval": 100,
+        "train_time": null
+    },
+    "test_kwargs": {
+        "env_train": null,
+        "env_test": null,
+        "agent": null,
+        "risk_free": 0.03,
+        "baseline_data_dir": "E:/强化学习/强化学习代码/数据集/DOW原始数据/DJI/",
+        "TRAIN_START_DATE": null,
+        "TRAIN_END_DATE": null,
+        "TEST_START_DATE": null,
+        "TEST_END_DATE": null,
+        "if_actor": null
+    },
+    "feature_extractors_kwargs": {
+        "flatten": {
+            "observation_space": null
+        }
+    }
+}
