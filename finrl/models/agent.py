@@ -178,7 +178,7 @@ class DDPG_MCTS():
                 targets = targets.expand((-1, self.N)) if targets.shape[1] == 1 else targets
             indexs = [i for i in range(self.N)]
             q_value_pres_list,figure_hidden = self.policy.get_q_value_only(figures1, figures2, figures3,data.observations, data.actions,indexs)
-             q_values_pre_all = torch.cat(q_value_pres_list, dim=1)
+            q_values_pre_all = torch.cat(q_value_pres_list, dim=1)
             critic_loss = nn.functional.mse_loss(q_values_pre_all, targets) 
             for index in range(self.N):
                 self.optim_critic_list[index].zero_grad()  # 优化器梯度清零
