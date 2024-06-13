@@ -14,7 +14,6 @@ class BestCRP():
         for tic, df_tic in df_train_validation.groupby('tic'):
             df_cumulative_returns[tic] = (df_tic.close / df_tic.shift(1).close).dropna()
         X = df_cumulative_returns
-        self.X = X
         self.w = self.opt_weights(X)
 
     def opt_weights(self, X, max_leverage=1):
@@ -23,10 +22,6 @@ class BestCRP():
         cons = ({'type': 'eq', 'fun': lambda w: max_leverage - np.sum(w)},)
         bnds = [(0., max_leverage)] * len(x_0)
         res = minimize(objective, x_0, bounds=bnds, constraints=cons, method='slsqp', options={'ftol': 1e-07})
-        self.res = res
-        self.X_0 = x_0
-        self.objective = objective
-        self.cons = cons
         return res.x
 
     def decide(self):
