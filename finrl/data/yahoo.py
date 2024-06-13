@@ -31,7 +31,7 @@ class YahooDownloader():
             temp_df.Date = pd.to_datetime(temp_df.Date)
             temp_df = temp_df[(temp_df.Date >= pd.to_datetime(self.start_date)) & (temp_df.Date <= pd.to_datetime(self.end_date))]
             temp_df["tic"] = tic[:-4] 
-            data_df = data_df.append(temp_df)
+            data_df = pd.concat([data_df,temp_df],ignore_index=True)
         data_df = data_df.reset_index(drop=True)
 
         try:

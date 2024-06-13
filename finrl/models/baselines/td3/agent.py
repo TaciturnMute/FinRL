@@ -21,8 +21,6 @@ class TD3():
             batch_size:int = None,
             episodes: int = None,
             n_updates: int = None,
-            n_steps: int = None,
-            if_prioritized: int = None,
             tau: float = None,
             gamma: float = None,
             policy_update_delay: int = None,  # 2
@@ -46,14 +44,10 @@ class TD3():
         self.batch_size = batch_size
         self.buffer = ReplayBuffer(buffer_capacity=buffer_size,
                                    batch_size=batch_size,
-                                   n_steps=n_steps,
                                    gamma=gamma,
-                                   if_prioritized=if_prioritized,
                                    device=device)
         self.episodes = episodes
         self.n_updates = n_updates
-        self.n_steps = n_steps
-        self.if_prioritized = if_prioritized
         self.tau = tau
         self.policy_update_delay = policy_update_delay
         self.target_copy_interval = target_copy_interval
@@ -95,22 +89,7 @@ class TD3():
                 next_q1, next_q2 = self.critic_target(data.next_observations, next_actions)
                 td_targets = data.rewards + self.gamma * (1 - data.dones) * torch.min(next_q1, next_q2)
             q_value_pres1, q_value_pres2 = self.critic(data.observations, data.actions)  # tensor
-
-            if self.if_prioritized:
-                # 1.cal td errors
-                td_errors = (q_value_pres1 + q_value_pres2) / self.critic.n_critics - td_targets
-                td_errors = td_errors.detach().numpy()
-                # td_errors = q_value_pres1 - td_targets
-                alpha = self.buffer.alpha
-                # 2. update priorities
-                self.buffer.update_priorities([*zip(data.sample_idx, (abs(td_errors)**alpha))])
-                weights = (data.sample_probs / min(data.sample_probs))**(-self.buffer.beta())
-                assert weights.requires_grad == False
-                critic_loss1 = (((q_value_pres1 - td_targets) ** 2) * (weights / 2)).mean()
-                critic_loss2 = (((q_value_pres2 - td_targets) ** 2) * (weights / 2)).mean()
-                critic_loss = critic_loss1 + critic_loss2
-            else:
-                critic_loss = nn.functional.mse_loss(q_value_pres1, td_targets) + nn.functional.mse_loss(q_value_pres2,td_targets)
+            critic_loss = nn.functional.mse_loss(q_value_pres1, td_targets) + nn.functional.mse_loss(q_value_pres2,td_targets)
             # optim respectively
             self.critic.optim1.zero_grad()
             self.critic.optim2.zero_grad()

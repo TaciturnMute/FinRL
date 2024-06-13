@@ -38,7 +38,7 @@ class PPO():
         self.buffer_size = n_rollout_steps
         self.n_rollout_steps = n_rollout_steps
         self.max_grad_norm = max_grad_norm
-        self.buffer = RolloutBuffer(self.buffer_size, batch_size, lambda_coef, gamma, self.env_train.observation_space.shape, self.env_train.action_dim, device)
+        self.buffer = RolloutBuffer(self.buffer_size, batch_size, lambda_coef, gamma, self.env_train.observation_space.shape, self.env_train.stock_dim, device)
         self.policy = Policy(**policy_kwargs).to(device)   # no target net
         self.policy.optim = torch.optim.Adam(self.policy.parameters(),policy_lr)
         self.policy.lr_scheduler = torch.optim.lr_scheduler.ConstantLR(self.policy.optim,factor=1)

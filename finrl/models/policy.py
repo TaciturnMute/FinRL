@@ -33,7 +33,6 @@ class DDPG_Policy_MCTS(nn.Module):
             mlp_activation,
             srl_aliase,
             srl_hidden_dim,
-            # if_redq,  N=M=1即可
             ):
         super(DDPG_Policy_MCTS,self).__init__()
         self.N = N
@@ -49,7 +48,17 @@ class DDPG_Policy_MCTS(nn.Module):
         self.srl_hidden_dim = srl_hidden_dim
         self._setup_model()
 
+
     def _setup_model(self):
+        ACTIVATION_FUNCTIONS = {
+            'relu': nn.ReLU,
+            'sigmoid': nn.Sigmoid,
+            'tanh': nn.Tanh,
+            'leaky_relu': nn.LeakyReLU,
+            # 你可以在这里添加更多的激活函数
+        }
+        self.cnn_activation = ACTIVATION_FUNCTIONS[self.cnn_activation]
+        self.mlp_activation = ACTIVATION_FUNCTIONS[self.mlp_activation]
         # 创建CNN，LSTM，actor和critic模块
         self.cnn1 = CNN(self.cnn_activation)  
         self.lstm1 = LSTM(self.lstm_input_size, self.lstm_hidden_size)  
@@ -220,6 +229,16 @@ class DDPG_Policy(nn.Module):
         self._setup_model()
 
     def _setup_model(self):
+        ACTIVATION_FUNCTIONS = {
+            'relu': nn.ReLU,
+            'sigmoid': nn.Sigmoid,
+            'tanh': nn.Tanh,
+            'leaky_relu': nn.LeakyReLU,
+            # 你可以在这里添加更多的激活函数
+        }
+        self.cnn_activation = ACTIVATION_FUNCTIONS[self.cnn_activation]
+        self.mlp_activation = ACTIVATION_FUNCTIONS[self.mlp_activation]
+        
         # 创建CNN，LSTM，actor和critic模块
         self.cnn1 = CNN(self.cnn_activation)  
         self.lstm1 = LSTM(self.lstm_input_size, self.lstm_hidden_size)  

@@ -56,7 +56,7 @@ class OrnsteinUhlenbeckActionNoise():
         return x
 
     def reset(self):
-        self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(self.mu)
+        self.x_prev = self.x0 if self.x0 is not None else self.mu
 
     def from_given_state(self,x_prev):
         self.x_prev = x_prev

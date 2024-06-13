@@ -18,8 +18,6 @@ class SAC():
             env_test,
             episodes: int = 10,
             n_updates: int = None,
-            n_steps: int = None,
-            if_prioritized: int = None,
             buffer_size: int = 100000,
             batch_size: int = 100,
             actor_lr: float = 3e-4,
@@ -45,8 +43,6 @@ class SAC():
         self.batch_size = batch_size
         self.episodes = episodes
         self.n_updates = n_updates
-        self.n_steps = n_steps
-        self.if_prioritized = if_prioritized
         self.tau = tau
         self.training_start = training_start
         self.policy_update_delay = policy_update_delay  # actor update delay
@@ -67,9 +63,7 @@ class SAC():
         self.actor.lr_scheduler = torch.optim.lr_scheduler.ConstantLR(self.actor.optim,factor=1)
         self.buffer = ReplayBuffer(buffer_capacity=buffer_size,
                                    batch_size=batch_size,
-                                   n_steps=n_steps,
                                    gamma=gamma,
-                                   if_prioritized=if_prioritized,
                                    device=device)
         self.action_range = [self.env_train.action_space.low,self.env_train.action_space.high]
         self.n_updates_now = 0
@@ -115,26 +109,7 @@ class SAC():
                 next_q_values = next_q_values - ent_coef * next_log_prob
                 targets = data.rewards + self.gamma * (1 - data.dones) * (next_q_values)
             current_q_values = self.critic(data.observations, data.actions)
-            if self.if_prioritized:
-                # q_values_pre_means = sum(current_q_values) / self.critic.n_critics
-                # td_errors = q_values_pre_means - targets
-                # assert q_values_pre_means.shape == targets.shape == td_errors.shape
-                # self.buffer.update_priorities([*zip(data.sample_idx, abs(td_errors))])
-
-                # 1.cal td errors
-                td_errors = sum(q_values_pre for q_values_pre in current_q_values) / self.critic.n_critics - targets
-                td_errors = td_errors.detach().numpy()
-                # td_errors = q_value_pres1 - td_targets
-                alpha = self.buffer.alpha
-                # 2. update priorities
-                self.buffer.update_priorities([*zip(data.sample_idx, (abs(td_errors)**alpha))])
-                weights = (data.sample_probs / min(data.sample_probs))**(-self.buffer.beta())
-                assert weights.requires_grad == False
-                critic_loss1 = (((current_q_values[0] - targets) ** 2) * (weights / 2)).mean()
-                critic_loss2 = (((current_q_values[1] - targets) ** 2) * (weights / 2)).mean()
-                critic_loss = (critic_loss1 + critic_loss2) / 2
-            else:
-                critic_loss = 0.5 * sum(nn.functional.mse_loss(current_q_value, targets) for current_q_value in current_q_values)
+            critic_loss = 0.5 * sum(nn.functional.mse_loss(current_q_value, targets) for current_q_value in current_q_values)
             self.critic.optim1.zero_grad()
             self.critic.optim2.zero_grad()
             critic_loss.backward()

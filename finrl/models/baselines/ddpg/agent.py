@@ -22,8 +22,6 @@ class DDPG():
             n_updates: int = None,
             buffer_size: int = None,
             batch_size: int = None,
-            n_steps: int = None,
-            if_prioritized: int = None, 
             tau: float = None,
             gamma: float = None,
             actor_lr: float = None,
@@ -43,7 +41,6 @@ class DDPG():
         self.env_test = env_test
         self.episodes = episodes
         self.n_updates = n_updates
-        self.if_prioritized = if_prioritized
         self.batch_size = batch_size
         self.buffer_size = buffer_size
         self.tau = tau
@@ -52,9 +49,7 @@ class DDPG():
         self.training_start = training_start
         self.buffer = ReplayBuffer(buffer_capacity=buffer_size,
                                    batch_size=batch_size,
-                                   n_steps=n_steps,
                                    gamma=gamma,
-                                   if_prioritized=if_prioritized,
                                    device=device)
         self.actor = Actor(**actor_kwargs).to(device)
         self.actor_target = Actor(**actor_kwargs).to(device)
@@ -85,18 +80,7 @@ class DDPG():
                 next_q_values = self.critic_target(data.next_observations, next_actions) # (batch_size, 1)
                 targets = data.rewards + self.gamma * (1 - data.dones) * next_q_values
             q_value_pres = self.critic(data.observations, data.actions)
-
-            if self.if_prioritized:
-                td_errors = (q_value_pres - targets).detach().numpy()
-                alpha = self.buffer.alpha
-                self.buffer.update_priorities([*zip(data.sample_idx, (abs(td_errors)**alpha))])
-                weights = (data.sample_probs / min(data.sample_probs))**(-self.buffer.beta())
-                assert weights.requires_grad == False
-                critic_loss = (((q_value_pres - targets)**2) * (weights / 2)).mean()
-                # nn.functional.mse_loss(x,y) == ((x - y)**2).mean()
-            else:
-                critic_loss = nn.functional.mse_loss(q_value_pres, targets)
-
+            critic_loss = nn.functional.mse_loss(q_value_pres, targets)
             self.critic.optim.zero_grad()
             critic_loss.backward()
             torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)

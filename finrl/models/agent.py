@@ -22,12 +22,10 @@ class DDPG_MCTS():
             env_train=None,
             env_validation=None,
             env_test=None,
-            episodes: int = None,
             n_updates: int = None,
             buffer_size: int = None,
             batch_size: int = None,
             n_steps: int = None,
-            if_prioritized: int = None, 
             tau: float = None,
             gamma: float = None,
             target_update_interval: float = None,
@@ -56,9 +54,7 @@ class DDPG_MCTS():
         self.env_train = env_train
         self.env_validation = env_validation
         self.env_test = env_test
-        self.episodes = episodes
         self.n_updates = n_updates
-        self.if_prioritized = if_prioritized
         self.batch_size = batch_size
         self.buffer_size = buffer_size
         self.tau = tau
@@ -75,9 +71,7 @@ class DDPG_MCTS():
         # 经验池
         self.buffer = ReplayBuffer(buffer_capacity=buffer_size,
                                    batch_size=batch_size,
-                                   n_steps=n_steps,
                                    gamma=gamma,
-                                   if_prioritized=if_prioritized,
                                    device=device)
         # 初始化Policy和Target Policy
         self.policy = DDPG_Policy_MCTS(**policy_kwargs).to(self.device)
@@ -160,9 +154,9 @@ class DDPG_MCTS():
             next_figures1, next_figures2, next_figures3  = get_figure(self.figure_path, data.next_dates, self.device)
             # srl训练
             if self.task == 'trading':
-                next_obs_part = data.next_observations[:, 1:1 + self.env_train.action_dim]  # trading任务预测价格。
+                next_obs_part = data.next_observations[:, 1:1 + self.env_train.stock_dim]  # trading任务预测价格。
             else:
-                next_obs_part = data.next_observations[:,self.env_train.action_dim,:]   # portfolio任务预测macd。
+                next_obs_part = data.next_observations[:,self.env_train.stock_dim,:]   # portfolio任务预测macd。
             states = self.policy.srl(data.observations)  
             srl_loss = 0.5 * nn.functional.mse_loss(self.policy.f_pre_obs(states), next_obs_part) +\
                         0.5 * nn.functional.mse_loss(self.policy.f_pre_r(states), data.rewards)
@@ -621,8 +615,6 @@ class DDPG():
             n_updates: int = None,
             buffer_size: int = None,
             batch_size: int = None,
-            n_steps: int = None,
-            if_prioritized: int = None, 
             tau: float = None,
             gamma: float = None,
             target_update_interval: float = None,
@@ -644,7 +636,6 @@ class DDPG():
         self.env_test = env_test
         self.episodes = episodes
         self.n_updates = n_updates
-        self.if_prioritized = if_prioritized
         self.batch_size = batch_size
         self.buffer_size = buffer_size
         self.tau = tau
@@ -657,9 +648,7 @@ class DDPG():
         self.task = task
         self.buffer = ReplayBuffer(buffer_capacity=buffer_size,
                                    batch_size=batch_size,
-                                   n_steps=n_steps,
                                    gamma=gamma,
-                                   if_prioritized=if_prioritized,
                                    device=device)
 
         self.policy = DDPG_Policy(**policy_kwargs).to(self.device)
@@ -729,9 +718,9 @@ class DDPG():
             # srl训练
             if self.if_srl:
                 if self.task == 'trading':
-                    next_obs_part = data.next_observations[:, 1:1 + self.env_train.action_dim]  # trading任务预测价格。
+                    next_obs_part = data.next_observations[:, 1:1 + self.env_train.stock_dim]  # trading任务预测价格。
                 else:
-                    next_obs_part = data.next_observations[:,self.env_train.action_dim,:]   # portfolio任务预测macd。
+                    next_obs_part = data.next_observations[:,self.env_train.stock_dim,:]   # portfolio任务预测macd。
                 states = self.policy.srl(data.observations)
                 srl_loss = 0.5 * nn.functional.mse_loss(self.policy.f_pre_obs(states), next_obs_part) +\
                             0.5 * nn.functional.mse_loss(self.policy.f_pre_r(states), data.rewards)
@@ -749,19 +738,11 @@ class DDPG():
                 targets = data.rewards + self.gamma * (1 - data.dones) * next_q_values
             q_value_pres,figure_hidden = self.policy.get_q_value_only(figures1, figures2, figures3,data.observations, data.actions)
 
-            if self.if_prioritized:
-                td_errors = (q_value_pres - targets).detach().numpy()
-                alpha = self.buffer.alpha
-                self.buffer.update_priorities([*zip(data.sample_idx, (abs(td_errors)**alpha))])
-                weights = (data.sample_probs / min(data.sample_probs))**(-self.buffer.beta())
-                assert weights.requires_grad == False
-                critic_loss = (((q_value_pres - targets)**2) * (weights / 2)).mean()
-            else:
-                critic_loss = nn.functional.mse_loss(q_value_pres, targets)
-                self.policy.optim_critic.zero_grad()
-                critic_loss.backward()
-                self.policy.optim_critic.step()
-                self.policy.lr_scheduler_critic.step()  
+            critic_loss = nn.functional.mse_loss(q_value_pres, targets)
+            self.policy.optim_critic.zero_grad()
+            critic_loss.backward()
+            self.policy.optim_critic.step()
+            self.policy.lr_scheduler_critic.step()  
 
             action_pres, actor_loss = self.policy(figures1, figures2, figures3, data.observations,figure_hidden=None,states=None)
             actor_loss = -actor_loss.mean() 

@@ -18,21 +18,19 @@ class StockTradingEnv(gym.Env):
         self,
         df: pd.DataFrame,
         stock_dim: int,
+        state_dim: int,
         hmax: int,
         initial_amount: int,
+        reward_scaling: float,
         num_stock_shares: List[int],
         buy_cost_pct: List[float],
         sell_cost_pct: List[float],
-        reward_scaling: float,
-        state_space: int,
-        action_space: int,
         tech_indicator_list: List[str],
         turbulence_threshold: float = None,
         risk_indicator_col: str = "turbulence",
         day: int = 0,
         initial=True,
         previous_state=[],
-        reward_aliase: str =  None,
         DATE_START: str = None,
         DATE_END: str = None,
         cash_norm_factor: float = None,
@@ -43,7 +41,6 @@ class StockTradingEnv(gym.Env):
         max_price: list = None,
         min_price: list = None,
     ):
-        self.reward_aliases = ['asset_diff', 'sharpe_rario_diff']
         self.day = day
         self.df = df
         self.stock_dim = stock_dim
@@ -51,17 +48,14 @@ class StockTradingEnv(gym.Env):
         self.num_share_norm_factor = num_share_norm_factor  # 持股数归一化
         self.num_stock_shares = num_stock_shares 
         self.initial_amount = initial_amount
+        self.reward_scaling = reward_scaling
         self.cash_norm_factor = cash_norm_factor
         self.buy_cost_pct = buy_cost_pct
         self.sell_cost_pct = sell_cost_pct
-        self.reward_scaling = reward_scaling
-        self.state_space = state_space
-        self.action_space = action_space
-        self.state_dim = self.state_space
-        self.action_dim = self.action_space
         self.tech_indicator_list = tech_indicator_list
-        self.action_space = spaces.Box(low=-1, high=1, shape=(self.action_space,)) # 测试时采样有用
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.state_space,))
+        self.action_space = spaces.Box(low=-1, high=1, shape=(self.stock_dim,)) # 测试时采样有用
+        self.state_dim = state_dim
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(self.state_dim,))
         self.data = self.df.loc[self.day, :]
         self.date = self._get_date()
         self.terminal = False
@@ -69,7 +63,6 @@ class StockTradingEnv(gym.Env):
         self.risk_indicator_col = risk_indicator_col
         self.initial = initial
         self.previous_state = previous_state
-        self.reward_aliase = reward_aliase
         self.if_price_norm = if_price_norm  
         self.if_indicator_norm = if_indicator_norm
         self.if_num_share_norm = if_num_share_norm
@@ -198,23 +191,7 @@ class StockTradingEnv(gym.Env):
         return total_asset
 
     def _cal_reward(self):
-        # calculate reward
-        if self.reward_aliase == 'asset_diff':
-            self.reward = (self.end_total_asset - self.begin_total_asset) * self.reward_scaling
-        elif self.reward_aliase == 'sharpe_ratio_diff':
-            # 根据历史return，计算夏普率
-            returns = pd.DataFrame(self.asset_memory)
-            returns.insert(0,"date", list(self.date_memory))
-            returns.dropna()
-            returns.columns = ['date', 'account_value']
-            if np.isnan(self.reward) or len(self.date_memory) <= 10:
-                self.reward = np.random.randn(1)[0] * 2
-            else:
-                self.reward = (sharpe_ratio(get_daily_return(returns)) - sharpe_ratio(
-                    get_daily_return(returns.iloc[:-1]))) * self.reward_scaling
-        else:
-            assert self.reward_aliase in self.reward_aliases, \
-                f"invalid reward type, supported reward types are{self.reward_aliases}"
+        self.reward = (self.end_total_asset - self.begin_total_asset) * self.reward_scaling
 
     def step(self, actions: np.ndarray) -> Tuple[np.ndarray, float, bool, dict]:
         self.terminal = self.day >= len(self.df.index.unique()) - 1
@@ -486,23 +463,16 @@ class StockPortfolioEnv(gym.Env):
         stock_dim: int = None,
         hmax: int = None,
         initial_amount: int = None,
+        reward_scaling: float = None,
         buy_cost_pct: list = None,
         sell_cost_pct: list = None,
-        reward_scaling: float = None,
-        state_space: int = None,
-        action_space: int = None,
         tech_indicator_list: list = None,   # indicators env used
-        turbulence_threshold=None,
-        lookback: int = 252,
         day: int = 0,
-        reward_aliase: str = None,
         DATE_START: str = None,
         DATE_END: str = None,
 
     ):
-        self.reward_aliases = ['asset_diff', 'asset_diff_dji', 'sharpe_ratio_diff']
         self.day = day
-        self.lookback = lookback  # 暂时没用到
         self.df = df
         self.stock_dim = stock_dim
         self.hmax = hmax
@@ -510,19 +480,14 @@ class StockPortfolioEnv(gym.Env):
         self.buy_cost_pct = buy_cost_pct
         self.sell_cost_pct = sell_cost_pct
         self.reward_scaling = reward_scaling
-        self.state_dim = state_space
-        self.action_dim = action_space
-        self.state_space = state_space
-        self.action_space = action_space
         self.tech_indicator_list = tech_indicator_list
 
         # action_space normalization and shape is self.stock_dim
-        # self.action_space = spaces.Box(low=0, high=1, shape=(self.action_space,))  # continuous
-        self.action_space = spaces.Box(low=-1, high=1, shape=(self.action_space,))
+        self.action_space = spaces.Box(low=-1, high=1, shape=(self.stock_dim,))
         # 状态空间为二维
         self.observation_space = spaces.Box(low=-np.inf,
                                             high=np.inf,
-                                            shape=(self.state_space + len(self.tech_indicator_list), self.state_space),
+                                            shape=(self.stock_dim + len(self.tech_indicator_list), self.stock_dim),
                                             )
 
         # load data from a pandas dataframe
@@ -536,7 +501,6 @@ class StockPortfolioEnv(gym.Env):
             axis=0,
         )
         self.terminal = False
-        self.turbulence_threshold = turbulence_threshold
         # initalize state: inital portfolio return + individual stock return + individual weights
         self.last_weights = np.array([1] * self.stock_dim) / self.stock_dim  # 向量，当前资产分配权重。后续可以参照设置previous_state。
         self.portfolio_value = self.initial_amount # 标量，当前资产总价值
@@ -548,12 +512,9 @@ class StockPortfolioEnv(gym.Env):
         self.date_memory = [self.data.date.unique()[0]]
         self.cost = 0
         self.trades = 0
-        self.reward_aliase = reward_aliase
         self.reward = np.nan
         self.rewards_memory = [0]
         self.date_range = [self.df.date.unique()[0],self.df.date.unique()[-1]]  # 数据集的日期范围
-        if self.reward_aliase == 'asset_diff_dji':
-            self._dji_bah()
         self.DATE_START = DATE_START
         self.DATE_END = DATE_END
 
@@ -611,26 +572,7 @@ class StockPortfolioEnv(gym.Env):
                 break
 
     def _cal_reward(self):
-
-        # calculate reward
-        if self.reward_aliase == 'asset_diff':
-            self.reward = (self.portfolio_value - self.last_portfolio) * self.reward_scaling
-        elif self.reward_aliase == 'sharpe_ratio_diff':
-            returns = pd.DataFrame(self.asset_memory)
-            returns.insert(0,"date", list(self.date_memory))
-            returns.dropna()
-            returns.columns = ['date', 'account_value']
-            if np.isnan(self.reward) or len(self.date_memory) <= 10:
-                self.reward = np.random.randn(1)[0] * 2
-            else:
-
-                self.reward = (sharpe_ratio(get_daily_return(returns)) - sharpe_ratio(
-                    get_daily_return(returns.iloc[:-1]))) * self.reward_scaling
-        elif self.reward_aliase == 'asset_diff_dji':
-            self.reward = (self.portfolio_value - self.dji_assets.loc[self.date].values[0]) * self.reward_scaling
-        else:
-            assert self.reward_aliase in self.reward_aliases, \
-                f"invalid reward type, supported reward types are{self.reward_aliases}"
+        self.reward = (self.portfolio_value - self.last_portfolio) * self.reward_scaling
 
     def step(self, actions: np.ndarray) -> Tuple[np.ndarray, float, bool, dict]:
         assert len(actions.shape) == 1
