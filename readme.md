@@ -12,7 +12,7 @@
 
 ## 项目结构
 
-项目包含三个文件夹：data/models/notebook
+项目的finrl包含三个文件夹：data/models/tutorial
 
 ### data
 
@@ -22,9 +22,9 @@
 
 项目的模型代码。baselines文件夹包含DRL模型和基于统计方法的基准模型。agent.py为项目模型的智能体代码部分。
 
-### notebook
+### tutorial
 
-包含notebook运行教程。generate_figure.ipynb为生成图片代码。
+包含notebook运行教程，py和sh执行文件。generate_figure为生成图片代码。
 
 portfolio和trading开头的文件对应两种任务。
 
